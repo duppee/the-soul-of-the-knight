@@ -1,1 +1,1 @@
-# Chocolate for the one who scores 2800 points
+# Chocolate for the one who scores 2500 points
