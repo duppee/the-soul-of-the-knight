@@ -28,8 +28,7 @@ class Background(pygame.sprite.Sprite):
 
 
 def SQL(new=0):
-    con = sqlite3.connect(
-        'res/POINTS.sqlite')
+    con = sqlite3.connect('res/POINTS.sqlite')
     cursor = con.cursor()
     res = cursor.execute('''SELECT points FROM scor''').fetchall()
     if new > int(res[0][0]):
@@ -326,6 +325,10 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+                stop = False
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                running = False
+                stop = False
         # fastbox сделан из лени для сундука, чтобы легче регулировать его хитбокс
         speed = speed1
         fastbox = box.rect.left + 26, box.rect.top, (box.rect.size[0] - 45, box.rect.size[1] - 80)
@@ -479,7 +482,7 @@ def main():
         # подсчет очков
         if best_result < scor:
             best_result = SQL(scor // 100 * 100)
-        font = pygame.font.SysFont('Inkulinati 210706 Regular', 30)
+        font = pygame.font.Font(None, 30)
         if stop:
             scor = int((pygame.time.get_ticks() - start_ticks) / 100)
         if stop:
@@ -505,4 +508,7 @@ def main():
 
 
 if __name__ == '__main__':
-    start_game()
+    try:
+        start_game()
+    except:
+        pass
