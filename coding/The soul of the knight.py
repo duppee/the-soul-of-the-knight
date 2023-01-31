@@ -29,7 +29,7 @@ class Background(pygame.sprite.Sprite):
 
 def SQL(new=0):
     con = sqlite3.connect(
-        '../../Users/ivanv/OneDrive/Рабочий стол/the soul of a knight/the soul of a knight/res/POINTS.sqlite')
+        'res/POINTS.sqlite')
     cursor = con.cursor()
     res = cursor.execute('''SELECT points FROM scor''').fetchall()
     if new > int(res[0][0]):
