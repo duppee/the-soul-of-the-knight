@@ -19,6 +19,223 @@ Bhp1 = Bhp
 ud = False
 
 
+class Background(pygame.sprite.Sprite):
+    def __init__(self, image_file, location):
+        pygame.sprite.Sprite.__init__(self)  # call Sprite initializer
+        self.image = pygame.image.load(image_file)
+        self.rect = self.image.get_rect()
+        self.rect.left, self.rect.top = location
+
+
+def SQL(new=0):
+    con = sqlite3.connect(
+        '../../Users/ivanv/OneDrive/Рабочий стол/the soul of a knight/the soul of a knight/res/POINTS.sqlite')
+    cursor = con.cursor()
+    res = cursor.execute('''SELECT points FROM scor''').fetchall()
+    if new > int(res[0][0]):
+        cursor.execute(f'''UPDATE scor SET points = {new}''').fetchall()
+    con.commit()
+    con.close()
+    return int(res[0][0])
+
+
+def pokazHITbox(screen, hero, f):  # показывает хитбокс спрайта (годно, но временно)
+    if f:
+        pygame.draw.rect(screen, '#000000',
+                         (hero.rect.left, hero.rect.top, 10, 10), width=0)  # черный
+        pygame.draw.rect(screen, '#0000FF',
+                         (hero.rect.left + hero.rect.size[0], hero.rect.top, 10, 10), width=0)  # синий
+        pygame.draw.rect(screen, '#00FF00',
+                         (hero.rect.left, hero.rect.top + hero.rect.size[1], 10, 10), width=0)  # зеленый
+        pygame.draw.rect(screen, '#FF0000',
+                         (hero.rect.left + hero.rect.size[0], hero.rect.top + hero.rect.size[1], 10, 10),
+                         width=0)
+    else:
+        x, y = hero[0:2]
+        a, b = hero[2]
+        pygame.draw.rect(screen, '#000000',
+                         (x, y, 10, 10), width=0)  # черный
+        pygame.draw.rect(screen, '#0000FF',
+                         (x + a, y, 10, 10), width=0)  # синий
+        pygame.draw.rect(screen, '#00FF00',
+                         (x, y + b, 10, 10), width=0)  # зеленый
+        pygame.draw.rect(screen, '#FF0000',
+                         (x + a, y + b, 10, 10),
+                         width=0)
+
+
+def collision(w1, w2):
+    x1, y1 = w1[0:2]
+    x2, y2 = w2[0:2]
+    a1, b1 = w1[2]
+    a2, b2 = w2[2]
+    one = [(x1, y1), (x1 + a1, y1), (x1, y1 + b1), (x1 + a1, y1 + b1)]
+    two = [(x2, y2), (x2 + a2, y2), (x2, y2 + b2), (x2 + a2, y2 + b2)]
+    if (one[0][1] < two[3][1] and one[0][1] < two[3][1]) and (one[1][0] > two[0][0] and one[0][0] < two[1][0]) and \
+            one[3][1] > two[0][1]:
+        return False
+    return True
+
+
+def load_image(name, colorkey=None):
+    fullname = os.path.join('', name)
+    # если файл не существует, то выходим
+    if not os.path.isfile(fullname):
+        print(f"Файл с изображением '{fullname}' не найден")
+        sys.exit()
+    try:
+        image = pygame.image.load(fullname)
+    except pygame.error as Message:
+        print(Message)
+        raise SystemExit(Message)
+    if colorkey is not None:
+        image = image.convert()
+    if colorkey == -1:
+        colorkey = image.get_at((0, 0))
+        image.set_colorkey(colorkey)
+    return image
+
+
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, ogranFON, hero, box, *group):
+        super().__init__(*group)
+        pygame.init()
+        self.stan = 0  # иначе моментально сжирают сундук
+        self.box = box
+        self.hero = hero
+
+        self.udar = pygame.mixer.Sound('res/ud2.wav')
+        self.udar1 = pygame.mixer.Sound('res/box.wav')
+
+        # все виды врагов (4 штуки) у всех все различается
+        self.enemy1 = load_image("res/E-easy1.png")
+        self.enemy2 = load_image("res/E-easy2.png")
+        self.image = self.enemy1
+        self.enemyGO = ['res/E-easyGO1.png', 'res/E-easyGO2.png', 'res/E-easyGO3.png']
+        self.h = 0
+        self.hp = 20
+        self.dmg = 20
+        self.speed = 1
+        self.size = (100, 100)
+        self.image = pygame.transform.scale(self.image, self.size)
+        self.fastbox = box.rect.left + 26, box.rect.top, (box.rect.size[0] - 45, box.rect.size[1] - 80)
+        self.fastbox1 = box.rect.left + 76, box.rect.top - 100, (box.rect.size[0] - 160, 1)
+        if scor >= 300 and random.randint(1, 3) == 1:
+            self.enemy1 = load_image("res/E-normal.png")
+            self.enemy2 = load_image("res/E-normal2.png")
+            self.image = self.enemy1
+            self.enemyGO = ['res/E-normalGO1.png', 'res/E-normalGO3.png', 'res/E-normalGO2.png']
+            self.hp = 30
+            self.dmg = 50
+            self.speed = 2
+            self.size = (200, 150)
+            self.image = pygame.transform.scale(self.image, self.size)
+            self.fastbox = box.rect.left + 76, box.rect.top, (box.rect.size[0] - 160, box.rect.size[1] - 60)
+        if scor >= 900 and random.randint(1, 3) == 1:
+            self.enemy1 = load_image("res/E-hard1.png")
+            self.enemy2 = load_image("res/E-hard2.png")
+            self.image = self.enemy1
+            self.enemyGO = ['res/E-hardGO1.png', 'res/E-hardGO2.png', 'res/E-hardGO3.png']
+            self.hp = 10
+            self.dmg = 100
+            self.speed = 4
+            self.size = (130, 100)
+            self.image = pygame.transform.scale(self.image, self.size)
+            self.fastbox = box.rect.left + 26, box.rect.top, (box.rect.size[0] - 45, box.rect.size[1] - 80)
+        if scor >= 1500 and random.randint(1, 6) == 1:
+            self.enemy1 = load_image("res/E-impossible1.png")
+            self.enemy2 = load_image("res/E-impossible3.png")
+            self.image = self.enemy1
+            self.enemyGO = ['res/E-impossibleGO1.png', 'res/E-impossibleGO2.png', 'res/E-impossibleGO3.png']
+            self.hp = 50
+            self.dmg = 120
+            self.speed = 1
+            self.size = (200, 150)
+            self.image = pygame.transform.scale(self.image, self.size)
+            self.fastbox = box.rect.left + 76, box.rect.top, (box.rect.size[0] - 140, box.rect.size[1] - 80)
+        self.rect = self.image.get_rect()
+
+        storona = random.randrange(1, 5)
+        if storona == 1:
+            self.rect.x = random.randrange(ogranFON[0], ogranFON[0] + ogranFON[2][0])  # > -
+            self.rect.y = ogranFON[1] - 100
+        if storona == 2:
+            self.rect.x = random.randrange(ogranFON[0], ogranFON[0] + ogranFON[2][0])  # > _
+            self.rect.y = ogranFON[1] + ogranFON[2][1] + 25
+        if storona == 3:
+            self.rect.x = ogranFON[0] - 100  # >|
+            self.rect.y = random.randrange(ogranFON[1], ogranFON[1] + ogranFON[2][1])
+        if storona == 4:
+            self.rect.x = ogranFON[0] + ogranFON[2][0] + 25  # >  |
+            self.rect.y = random.randrange(ogranFON[1], ogranFON[1] + ogranFON[2][1])
+
+        x = (self.box.rect.x + self.box.rect.size[0] * 0.5)
+        x2 = (self.rect.x + self.rect.size[0] * 0.5)
+
+        if x < x2:
+            self.image = pygame.transform.flip(self.image, True, False)
+            self.f = True
+        else:
+            self.image = pygame.transform.flip(self.image, False, False)
+            self.f = False
+
+    def update(self, *args):
+        global ud, Bhp, f
+        if f:
+            self.l = self.hero.rect.left + self.hero.rect.size[0] * 0.2
+        else:
+            self.l = self.hero.rect.left + self.hero.rect.size[0] * 0.1
+        if ud and not \
+                collision(
+                    (self.l, self.hero.rect.top + 40, (self.hero.rect.size[0] * 0.5, self.hero.rect.size[1] - 60)),
+                    (self.rect.left, self.rect.top, self.rect.size)):
+            ud = False
+            self.hp -= Hdmg
+            self.udar.play()
+        if self.hp <= 0:
+            self.kill()
+        s = 1
+
+        self.x = (self.box.rect.x + self.box.rect.size[0] * 0.5)
+        self.y = (self.box.rect.y + self.box.rect.size[1] * 0.3)
+        self.x2 = (self.rect.x + self.rect.size[0] * 0.5)
+        self.y2 = (self.rect.y + self.rect.size[1] * 0.5)
+
+        if self.x2 < self.x and collision(self.fastbox, (self.rect.left, self.rect.top, self.rect.size)):
+            self.rect.x += self.speed
+            s = 0
+        elif self.x2 > self.x and collision((self.rect.left, self.rect.top, self.rect.size), self.fastbox):
+            self.rect.x -= self.speed
+            s = 0
+        if self.size[1] <= 100:
+            a = self.fastbox
+        else:
+            a = self.fastbox1
+        if self.y2 < self.y and collision((self.rect.left, self.rect.top, self.rect.size), self.fastbox):
+            self.rect.y += self.speed
+            s = 0
+        elif self.y2 > self.y and collision((self.rect.left, self.rect.top, self.rect.size), a):
+            self.rect.y -= self.speed
+            s = 0
+        self.stan -= 1
+        if not s:
+            self.h += 1
+            self.image = load_image(self.enemyGO[self.h % len(self.enemyGO)])
+            self.image = pygame.transform.scale(self.image, self.size)
+            self.image = pygame.transform.flip(self.image, self.f, False)
+        if s and self.stan < 80:
+            self.image = self.enemy1
+            self.image = pygame.transform.scale(self.image, self.size)
+            self.image = pygame.transform.flip(self.image, self.f, False)
+        if s and self.stan <= 0:
+            self.image = self.enemy2
+            self.image = pygame.transform.scale(self.image, self.size)
+            self.image = pygame.transform.flip(self.image, self.f, False)
+            Bhp -= self.dmg
+            self.udar1.play()
+            self.stan = 100
+
+
 def start_game():
     global screen
     pygame.init()
